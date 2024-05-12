@@ -1,0 +1,148 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+### Cargamos el archivo csv desde ruta "X"
+
+df <- read.csv(file.choose(), header = TRUE, sep = ",")
+
+```
+
+```{r}
+### Visualizo los datos y los fijo.
+
+attach(df)
+```
+
+```{r}
+### Reviso todos los nombres del dataset.
+
+names(df)
+```
+
+```{r}
+### Cargar paquete para empezar a trabajar.
+
+library(dplyr)
+```
+
+```{r}
+### Creamos un nuevo dataframe que contenga únicamente las siguientes columnas;
+
+df_nuevo <- df[, c( "host_is_superhost",
+                    "host_identity_verified",
+                    "bathrooms",
+                    "bedrooms",
+                    "daily_price",
+                    "security_deposit",
+                    "minimum_nights",
+                    "number_of_reviews",
+                    "review_scores_rating")]
+```
+
+```{r}
+### Cambiar los factores de la variable “host_is_superhost” de 0, 1 a: “SI” y, “NO”. (investigar la función recode).
+
+df_nuevo$host_is_superhost[df$host_is_superhost == "0"] <- "SI"
+
+df_nuevo$host_is_superhost[df$host_is_superhost == "1"] <- "NO"
+```
+
+```{r}
+### Cambiar los factores de la variable “host_identity_verified” de 0, 1 a: “VERIFICA” y “NO VERIFICA”.
+
+df_nuevo$host_identity_verified <- recode(as.character(df$host_identity_verified), "0" = "VERIFICA" ,
+                                          "1" = "NO VERIFICA") %>% as.factor()
+```
+
+```{r}
+### Vemos en un resumen como queda las verificaciones y no verificaciones.
+
+summary(df_nuevo)
+```
+
+```{r}
+### Vemos mediante el string si se ha cambiado a "SI" y "NO".
+
+str(df_nuevo)
+```
+
+```{r}
+### Filtramos el dataset por apartamentos cuyo mínimo de noches sea igual o menor que siete.
+
+df_nuevo <- filter(df_nuevo, minimum_nights <= 7)
+df_nuevo
+
+
+df_nuevo[df$minimum_nights <= 7,]
+```
+
+```{r}
+### Cuál es el precio medio por día de una habitación en función de si el anfitrión tiene verificado o no su perfil?
+
+str(df_nuevo)
+
+df_nuevo %>% select(host_identity_verified, daily_price) %>% group_by(host_identity_verified) %>% summarise(media_host = mean(daily_price))
+```
+
+```{r}
+### Quién tiene más número de reseñas, ¿un super host o no super host?
+
+df_nuevo %>% select(number_of_reviews, host_is_superhost) %>% group_by(host_is_superhost) %>% summarise(max(number_of_reviews))
+```
+
+```{r}
+### Sobre la estadística anterior ¿quién tiene la puntuación media más alta?
+
+df_nuevo %>% select(number_of_reviews, host_is_superhost,review_scores_rating) %>% group_by(host_is_superhost) %>% summarise(max(number_of_reviews), media_scores = mean(review_scores_rating))
+```
+
+```{r}
+### Crea un vector categórico llamado “CATEGORÍA”, en función de que, si para la puntuación de las reseñas tiene de 0 a 49, sea “NO ACONSEJABLE”; de 50 a 75 sea “ESTÁNDAR”; y de 76 a 100 sea “TOP”.
+
+df_nuevo$categoria[df_nuevo$review_scores_rating <= 49] <- "NO ACONCEJABLE"
+df_nuevo$categoria[df_nuevo$review_scores_rating >= 50 & df_nuevo$review_scores_rating <= 75] <- "ESTANDAR"
+df_nuevo$categoria[df_nuevo$review_scores_rating > 75] <- "TOP"
+
+df_nuevo$categoria <- factor(df_nuevo$categoria)
+```
+
+```{r}
+### Mostrar las frecuencias de la variable CATEGORÍA y vemos el resumen de como va quedando el análisis.
+
+summary(df_nuevo)
+```
+
+```{r}
+### Obtener el histograma del precio por día.
+
+hist(df_nuevo$daily_price, main="Precio por dia",border = "blue", xlab = "Cuenta por dia", ylab= "Frecuencia")
+```
+
+```{r}
+### Otra forma de mostrar el precio por día.
+
+library(ggplot2)
+qplot(data = df,x = daily_price)
+```
+
+```{r}
+### Estudiar la relación entre los dormitorios y baños de forma gráfica.
+
+qplot(data = df_nuevo, x=bedrooms, y=bathrooms)
+```
+
+```{r}
+### Mostrar un histograma del número de reseñas en función de si es un usuario verificado o no.
+
+qplot(data = df,x=number_of_reviews, color=host_identity_verified)
+```
+
+```{r}
+### Mostrar un histograma por cada valor de “CATEGORÍA” en el que se enseñe la cuantía del depósito de seguridad en función de si el anfitrión es super host o no.
+
+ggplot(df_nuevo)+
+  geom_histogram(mapping = aes(x=security_deposit, fill=host_is_superhost),color = "pink")+ facet_wrap("~categoria")
+```
